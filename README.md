@@ -45,7 +45,7 @@ future projects, as are `sheets-cli`, `sheets-skills`, and `sheets-mcp`.
 
 ```bash
 bun install
-bun run dev
+just dev
 ```
 
 Open [http://localhost:2323/?debug](http://localhost:2323/?debug) to attach the
@@ -57,24 +57,36 @@ this state and `auditScene(scene)` before using screenshots.
 ## Verify
 
 ```bash
-bun run format:check
-bun run lint
-bun run test
-bun run build
+just verify
+just browser-verify
+just browser-verify firefox
+just browser-verify-all
 ```
+
+Browser verification uses the dedicated port `24323` by default so it does not
+attach to or terminate an Agent's development server on `2323`. The test server
+is never reused, and the `just` recipes run Playwright in deterministic CI mode
+with web-server tracing so its child server remains attached in non-interactive
+Agent shells. Set `PLAYWRIGHT_PORT` when a parallel worktree needs another
+isolated E2E port.
 
 ## Deploy
 
-The Cloudflare Pages project is `sheets-website` at
+The canonical application is <https://sheets-website.vectojs.org/>. Its
+Cloudflare Pages project is `sheets-website`; the fallback deployment URL is
 <https://sheets-website.pages.dev>. With an authenticated Wrangler session:
 
 ```bash
-bun run build
-bun run deploy
+just deploy
 ```
 
-The deployment script streams Wrangler output, detects both legacy and v4
-success messages, and exits instead of waiting indefinitely for Wrangler logs.
+The deployment script streams Wrangler output, waits for the final
+`Deployment complete!` marker, and then exits instead of waiting indefinitely
+for Wrangler logs. An upload-only message is not treated as a completed Pages
+deployment. `just deploy` runs the local non-browser verification gates and
+build before invoking that script. `just browser-verify` defaults to Chromium
+and accepts a Playwright project such as `firefox`; `just browser-verify-all`
+runs the complete Chromium, Firefox, and WebKit matrix used by CI.
 
 ## Repository family
 

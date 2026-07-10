@@ -13,7 +13,7 @@ if ! command -v wrangler &>/dev/null; then
   exit 1
 fi
 
-workspace_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+workspace_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)
 mkdir -p "$workspace_root/tmp"
 log_file=$(mktemp "$workspace_root/tmp/sheets-pages-deploy.XXXXXX.log")
 wrangler_pid=""
@@ -28,7 +28,8 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Deploying $PUBLIC_DIR to Cloudflare Pages project $PROJECT_NAME..."
-CI=true CLOUDFLARE_TELEMETRY_DISABLED=1 NO_UPDATE_NOTIFIER=1 \
+env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+  CI=true CLOUDFLARE_TELEMETRY_DISABLED=1 NO_UPDATE_NOTIFIER=1 \
   wrangler pages deploy "$PUBLIC_DIR" --project-name "$PROJECT_NAME" --branch "$BRANCH" --commit-dirty=true \
   >"$log_file" 2>&1 &
 wrangler_pid=$!
@@ -45,13 +46,13 @@ for _ in {1..300}; do
     fi
   fi
 
-  if grep -Eq "Deployment complete!|Success! Uploaded" "$log_file" 2>/dev/null; then
+  if grep -q "Deployment complete!" "$log_file" 2>/dev/null; then
     success=true
     break
   fi
 
   if ! kill -0 "$wrangler_pid" 2>/dev/null; then
-    grep -Eq "Deployment complete!|Success! Uploaded" "$log_file" 2>/dev/null && success=true
+    grep -q "Deployment complete!" "$log_file" 2>/dev/null && success=true
     break
   fi
   sleep 0.5

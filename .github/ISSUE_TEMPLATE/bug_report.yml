@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a reproducible Native Sheets interaction or rendering defect.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: Describe what happened and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Include the selected range/cell, pointer or keyboard sequence, and sheet data needed to reproduce it.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: "Firefox 130 on Linux"
+    validations:
+      required: true
+  - type: input
+    id: viewport
+    attributes:
+      label: Viewport, device scale, and browser zoom
+      placeholder: "1440x900, DPR 2, 90% zoom"
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: VectoJS diagnostics
+      description: Open `?debug` and include relevant audit findings, entity geometry, or `debugTrace()` entries. Do not paste secrets.
+      render: json

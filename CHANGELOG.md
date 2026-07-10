@@ -6,11 +6,18 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Isolate Playwright on a configurable E2E port so concurrent Agent development
+  servers cannot be mistaken for the test server.
 - Removed the projected sheet-name input when its temporary canvas entity is
   dismissed, preventing it from intercepting later tab actions in WebKit.
+- Wait for Cloudflare's final deployment marker before terminating Wrangler,
+  preventing upload-only CI runs from leaving the production domain stale.
 
 ### Added
 
+- Repository `Justfile` with shared development, verification, selectable local
+  browser verification, full CI browser matrix, and Cloudflare Pages deployment
+  entry points.
 - Exact-pinned `@vectojs/sheets-core@0.1.5` with common numeric, logical, and
   error-recovery formula functions.
 - Exact-pinned `@vectojs/devtools@0.3.0` with opt-in routing trace exposed by

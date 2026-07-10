@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose a spreadsheet interaction or workflow.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: intent
+    attributes:
+      label: User intent
+      description: Describe the spreadsheet task and why the current interaction cannot complete it.
+    validations:
+      required: true
+  - type: textarea
+    id: interaction
+    attributes:
+      label: Pointer, keyboard, and accessibility contract
+      description: Describe expected mouse/touch/keyboard behavior, focus, semantics, and responsive states.
+    validations:
+      required: true
+  - type: textarea
+    id: model
+    attributes:
+      label: Core model impact
+      description: Identify any pure document operation that belongs in `@vectojs/sheets-core` rather than the canvas adapter.

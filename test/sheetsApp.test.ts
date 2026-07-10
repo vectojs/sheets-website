@@ -151,6 +151,46 @@ describe("SheetController", () => {
     controller.undo();
     expect(model.hasFormat(0, 0)).toBe(false);
   });
+
+  it("applies selected row structure through Core and reconciles the viewport", () => {
+    const { model, controller } = createController();
+    model.setCell(1, 0, "10");
+    model.setCell(1, 1, "=A2*2");
+    controller.select({ row: 1, col: 0 });
+
+    expect(controller.insertRows()).toBe(true);
+    expect(model.rows).toBe(21);
+    expect(controller.viewport.rows).toBe(21);
+    expect(model.getRaw(2, 0)).toBe("10");
+    expect(model.getRaw(2, 1)).toBe("=A3*2");
+    expect(controller.viewport.selected).toEqual({ row: 1, col: 0 });
+
+    controller.undo();
+    expect(model.rows).toBe(20);
+    expect(controller.viewport.rows).toBe(20);
+    expect(model.getRaw(1, 1)).toBe("=A2*2");
+
+    controller.redo();
+    expect(model.rows).toBe(21);
+    expect(controller.viewport.rows).toBe(21);
+    expect(model.getRaw(2, 1)).toBe("=A3*2");
+  });
+
+  it("does not remove the final row or column through structural commands", () => {
+    const model = new SheetModel(1, 1);
+    const viewport = new SheetViewport({
+      rows: model.rows,
+      cols: model.cols,
+      rowHeight: 24,
+      colWidth: 100,
+    });
+    const controller = new SheetController(model, viewport);
+
+    expect(controller.deleteRows()).toBe(false);
+    expect(controller.deleteColumns()).toBe(false);
+    expect(model.rows).toBe(1);
+    expect(model.cols).toBe(1);
+  });
 });
 
 describe("SheetsApp", () => {

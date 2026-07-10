@@ -116,6 +116,37 @@ test("drags a canvas range and applies spreadsheet navigation shortcuts", async 
     .toEqual({ format: { bold: true }, audit: [] });
 });
 
+test("applies undoable row structure through the canvas toolbar", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const toolbar = page.getByRole("toolbar", { name: /structure and export/ });
+  const box = await toolbar.boundingBox();
+  if (!box) throw new Error("Spreadsheet toolbar is not measurable");
+
+  await page.mouse.click(box.x + 132, box.y + 24);
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        rows: window.__app?.model.rows,
+        movedHeader: window.__app?.model.getRaw(1, 0),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({ rows: 10_001, movedHeader: "Month", audit: [] });
+
+  await page.keyboard.press("Control+z");
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        rows: window.__app?.model.rows,
+        restoredHeader: window.__app?.model.getRaw(0, 0),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({ rows: 10_000, restoredHeader: "Month", audit: [] });
+});
+
 test("switches and creates workbook sheets through the canvas tab strip", async ({
   page,
 }) => {

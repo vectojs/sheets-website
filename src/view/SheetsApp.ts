@@ -7,6 +7,7 @@ import {
   pasteText,
   SheetHistory,
   SheetModel,
+  type SheetStructureOperation,
   toCsv,
   toWorkbookJson,
   Workbook,
@@ -17,6 +18,9 @@ import { SheetToolbarEntity } from "./SheetToolbarEntity";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 
 const TOOLBAR_HEIGHT = 48;
+const TOOLBAR_WIDTH = 292;
+const COMPACT_TOOLBAR_WIDTH = 188;
+const COMPACT_TOOLBAR_BREAKPOINT = 480;
 const TABS_HEIGHT = 32;
 
 /** Pure interaction state shared by canvas input and the native editor. */
@@ -95,10 +99,12 @@ export class SheetController {
 
   undo(): void {
     this.history.undo();
+    this.viewport.setBounds(this.model.rows, this.model.cols);
   }
 
   redo(): void {
     this.history.redo();
+    this.viewport.setBounds(this.model.rows, this.model.cols);
   }
 
   copySelection(): string {
@@ -125,6 +131,60 @@ export class SheetController {
         writes.push({ row, col, format });
     }
     this.history.applyFormats(writes);
+  }
+
+  insertRows(): boolean {
+    const range = this.viewport.selectionRange();
+    return this.applyStructure({
+      kind: "insert",
+      axis: "row",
+      index: range.r1,
+      count: range.r2 - range.r1 + 1,
+    });
+  }
+
+  deleteRows(): boolean {
+    const range = this.viewport.selectionRange();
+    if (range.r2 - range.r1 + 1 >= this.model.rows) return false;
+    return this.applyStructure({
+      kind: "delete",
+      axis: "row",
+      index: range.r1,
+      count: range.r2 - range.r1 + 1,
+    });
+  }
+
+  insertColumns(): boolean {
+    const range = this.viewport.selectionRange();
+    return this.applyStructure({
+      kind: "insert",
+      axis: "column",
+      index: range.c1,
+      count: range.c2 - range.c1 + 1,
+    });
+  }
+
+  deleteColumns(): boolean {
+    const range = this.viewport.selectionRange();
+    if (range.c2 - range.c1 + 1 >= this.model.cols) return false;
+    return this.applyStructure({
+      kind: "delete",
+      axis: "column",
+      index: range.c1,
+      count: range.c2 - range.c1 + 1,
+    });
+  }
+
+  private applyStructure(operation: SheetStructureOperation): boolean {
+    this.history.applyStructure(operation);
+    this.viewport.setBounds(this.model.rows, this.model.cols);
+    const selected = this.viewport.selected;
+    this.viewport.select({
+      row: operation.axis === "row" ? operation.index : selected.row,
+      col: operation.axis === "column" ? operation.index : selected.col,
+    });
+    this.viewport.ensureVisible(this.viewport.selected);
+    return true;
   }
 }
 
@@ -164,7 +224,9 @@ export class SheetsApp {
       onRename: (id) => this.beginSheetRename(id),
       onDelete: (id) => this.deleteSheet(id),
     });
-    this.toolbar = new SheetToolbarEntity((format) => this.copyExport(format));
+    this.toolbar = new SheetToolbarEntity((action) =>
+      this.handleToolbarAction(action),
+    );
     this.formulaBar = new Input({
       width: 320,
       height: 32,
@@ -206,9 +268,12 @@ export class SheetsApp {
     this.grid.setPosition(0, TOOLBAR_HEIGHT);
     this.grid.resize(width, Math.max(0, height - TOOLBAR_HEIGHT - TABS_HEIGHT));
     this.toolbar.setPosition(0, 0);
-    this.toolbar.resize(112, TOOLBAR_HEIGHT);
-    this.formulaBar.setPosition(120, 8);
-    this.formulaBar.width = Math.max(120, width - 132);
+    const compactToolbar = width < COMPACT_TOOLBAR_BREAKPOINT;
+    const toolbarWidth = compactToolbar ? COMPACT_TOOLBAR_WIDTH : TOOLBAR_WIDTH;
+    this.toolbar.setCompact(compactToolbar);
+    this.toolbar.resize(toolbarWidth, TOOLBAR_HEIGHT);
+    this.formulaBar.setPosition(toolbarWidth + 8, 8);
+    this.formulaBar.width = Math.max(0, width - toolbarWidth - 20);
     this.tabs.setPosition(0, Math.max(TOOLBAR_HEIGHT, height - TABS_HEIGHT));
     this.tabs.resize(width, TABS_HEIGHT);
     this.scene.markDirty();
@@ -567,6 +632,33 @@ export class SheetsApp {
         ? toWorkbookJson(this.workbook)
         : toCsv(this.model, this.viewport.selectionRange());
     void navigator.clipboard?.writeText(content);
+  }
+
+  private handleToolbarAction(
+    action: import("./SheetToolbarEntity").SheetToolbarAction,
+  ): void {
+    switch (action) {
+      case "export-json":
+        this.copyExport("json");
+        return;
+      case "export-csv":
+        this.copyExport("csv");
+        return;
+      case "insert-row":
+        this.controller.insertRows();
+        break;
+      case "delete-row":
+        this.controller.deleteRows();
+        break;
+      case "insert-column":
+        this.controller.insertColumns();
+        break;
+      case "delete-column":
+        this.controller.deleteColumns();
+        break;
+    }
+    this.syncFormulaBar();
+    this.scene.markDirty();
   }
 }
 

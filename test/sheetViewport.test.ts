@@ -55,6 +55,27 @@ describe("SheetViewport", () => {
     expect(view.selected).toEqual({ row: 1, col: 2 });
   });
 
+  it("reconciles selection and scroll position when sheet dimensions change", () => {
+    const view = new SheetViewport({
+      rows: 20,
+      cols: 10,
+      rowHeight: 24,
+      colWidth: 100,
+    });
+    view.resize(340, 148);
+    view.select({ row: 19, col: 9 });
+    view.scrollTo(900, 456);
+
+    view.setBounds(5, 3);
+
+    expect(view.rows).toBe(5);
+    expect(view.cols).toBe(3);
+    expect(view.selected).toEqual({ row: 4, col: 2 });
+    expect(view.selectionRange()).toEqual({ r1: 4, c1: 2, r2: 4, c2: 2 });
+    expect(view.scrollX).toBe(0);
+    expect(view.scrollY).toBe(0);
+  });
+
   it("scrolls the selected cell into the visible body", () => {
     const view = new SheetViewport({
       rows: 100,

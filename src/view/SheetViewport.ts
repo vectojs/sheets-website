@@ -25,8 +25,8 @@ export interface SheetViewportOptions {
  * uses the same coordinate conversion, keeping selection and pixels aligned.
  */
 export class SheetViewport {
-  readonly rows: number;
-  readonly cols: number;
+  rows: number;
+  cols: number;
   readonly rowHeight: number;
   readonly colWidth: number;
   readonly rowHeaderWidth: number;
@@ -54,6 +54,19 @@ export class SheetViewport {
     this.scrollTo(this.scrollX, this.scrollY);
   }
 
+  /**
+   * Synchronize the viewport after a document-level structural operation.
+   * Clamping both the selected endpoint and anchor keeps the visual selection
+   * valid without duplicating sparse-document transformation rules in the UI.
+   */
+  setBounds(rows: number, cols: number): void {
+    this.rows = Math.max(1, Math.floor(rows));
+    this.cols = Math.max(1, Math.floor(cols));
+    this.selected = this.clampPosition(this.selected);
+    this.anchor = this.clampPosition(this.anchor);
+    this.scrollTo(this.scrollX, this.scrollY);
+  }
+
   scrollBy(deltaX: number, deltaY: number): void {
     this.scrollTo(this.scrollX + deltaX, this.scrollY + deltaY);
   }
@@ -73,19 +86,13 @@ export class SheetViewport {
   }
 
   select(position: CellPosition): void {
-    const target = {
-      row: clamp(position.row, 0, this.rows - 1),
-      col: clamp(position.col, 0, this.cols - 1),
-    };
+    const target = this.clampPosition(position);
     this.selected = target;
     this.anchor = target;
   }
 
   extendSelection(position: CellPosition): void {
-    this.selected = {
-      row: clamp(position.row, 0, this.rows - 1),
-      col: clamp(position.col, 0, this.cols - 1),
-    };
+    this.selected = this.clampPosition(position);
   }
 
   selectionRange(): Rect {
@@ -180,6 +187,13 @@ export class SheetViewport {
 
   private maxScrollY(): number {
     return Math.max(0, this.rows * this.rowHeight - this.bodyHeight());
+  }
+
+  private clampPosition(position: CellPosition): CellPosition {
+    return {
+      row: clamp(position.row, 0, this.rows - 1),
+      col: clamp(position.col, 0, this.cols - 1),
+    };
   }
 }
 

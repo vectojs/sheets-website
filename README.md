@@ -33,13 +33,12 @@ package; this repository owns only the VectoJS UI/UX adapter.
   alignment, and number/currency/percent display, with Ctrl/Command+B/I and
   transactional undo/redo.
 - versioned workbook JSON plus formula-preserving RFC 4180 CSV serialization
-
-Structural row and column insertion/deletion is transactional, preserves sparse
-formatting, rewrites A1-style formula references, and participates in the same
-undo/redo history as cell edits. The Canvas toolbar keeps these document
-commands available on narrow screens while adapting export controls to fit.
-primitives, with canvas JSON/CSV copy controls and CSV paste import, shared
-by future CLI and MCP adapters.
+  primitives, with canvas JSON/CSV copy controls and CSV paste import, shared
+  by future CLI and MCP adapters.
+- structural row and column insertion/deletion with sparse-format preservation,
+  A1-style formula-reference rewriting, and transactional undo/redo. The
+  Canvas toolbar keeps these document commands on narrow screens while
+  compacting lower-priority export controls.
 
 - responsive container measurement and `?debug` VMT inspection/audit.
 

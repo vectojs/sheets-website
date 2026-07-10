@@ -147,6 +147,67 @@ test("applies undoable row structure through the canvas toolbar", async ({
     .toEqual({ rows: 10_000, restoredHeader: "Month", audit: [] });
 });
 
+test("resizes a row and fills cells through Canvas pointer gestures", async ({
+  page,
+}) => {
+  await page.goto("/?debug");
+  const grid = page.getByRole("application", { name: /Spreadsheet grid/ });
+  const box = await grid.boundingBox();
+  if (!box) throw new Error("Spreadsheet grid a11y surface is not measurable");
+
+  await page.mouse.move(box.x + 20, box.y + 52);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 20, box.y + 68);
+  await page.mouse.up();
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        rowSize: window.__app?.model.getAxisSize("row", 0),
+        secondRowY: window.__app?.app.viewport.cellRect({ row: 1, col: 0 }).y,
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({ rowSize: 40, secondRowY: 68, audit: [] });
+
+  await page.mouse.move(box.x + 152, box.y + 68);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 80, box.y + 132);
+  await page.mouse.up();
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        filled: window.__app?.model.getRaw(3, 0),
+        selection: window.__app?.app.viewport.selectionRange(),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({
+      filled: "Month",
+      selection: { r1: 0, c1: 0, r2: 3, c2: 0 },
+      audit: [],
+    });
+
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+z");
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        filled: window.__app?.model.getRaw(3, 0),
+        rowSize: window.__app?.model.getAxisSize("row", 0),
+        trace: window.__app?.debugTrace?.().map((entry) => entry.type),
+      })),
+    )
+    .toEqual({
+      filled: "March",
+      rowSize: 24,
+      trace: expect.arrayContaining([
+        "pointerdown",
+        "pointermove",
+        "pointerup",
+      ]),
+    });
+});
+
 test("switches and creates workbook sheets through the canvas tab strip", async ({
   page,
 }) => {

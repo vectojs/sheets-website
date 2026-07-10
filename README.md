@@ -59,7 +59,16 @@ this state and `auditScene(scene)` before using screenshots.
 ```bash
 just verify
 just browser-verify
+just browser-verify firefox
+just browser-verify-all
 ```
+
+Browser verification uses the dedicated port `24323` by default so it does not
+attach to or terminate an Agent's development server on `2323`. The test server
+is never reused, and the `just` recipes run Playwright in deterministic CI mode
+with web-server tracing so its child server remains attached in non-interactive
+Agent shells. Set `PLAYWRIGHT_PORT` when a parallel worktree needs another
+isolated E2E port.
 
 ## Deploy
 
@@ -75,8 +84,9 @@ The deployment script streams Wrangler output, waits for the final
 `Deployment complete!` marker, and then exits instead of waiting indefinitely
 for Wrangler logs. An upload-only message is not treated as a completed Pages
 deployment. `just deploy` runs the local non-browser verification gates and
-build before invoking that script; `just browser-verify` remains available for
-the complete Playwright matrix.
+build before invoking that script. `just browser-verify` defaults to Chromium
+and accepts a Playwright project such as `firefox`; `just browser-verify-all`
+runs the complete Chromium, Firefox, and WebKit matrix used by CI.
 
 ## Repository family
 

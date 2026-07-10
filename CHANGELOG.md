@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Exact-pinned `@vectojs/sheets-core@0.1.5` with common numeric, logical, and
+  error-recovery formula functions.
 - Canvas-native virtualized 10,000 × 100 grid with frozen headers and responsive scene sizing.
 - Formula model with references, ranges, aggregates, conditional logic, percent, exponentiation, and `&` concatenation.
 - Cell and range selection, IME-safe editing, formula bar, TSV copy/paste, clearing, and undo/redo history.

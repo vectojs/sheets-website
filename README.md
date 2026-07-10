@@ -17,6 +17,8 @@ package; this repository owns only the VectoJS UI/UX adapter.
 - sparse formula document with scalar/range dependencies and cycle detection;
 - formulas with arithmetic, percent, exponentiation, text concatenation, and
   `SUM`, `AVG`/`AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, and `CONCAT`;
+- common numeric, logical, and recovery formulas: `ABS`, `ROUND`, `ROUNDUP`,
+  `ROUNDDOWN`, `AND`, `OR`, `NOT`, and `IFERROR`;
 - virtualized grid, fixed headers, scrolling, pointer-drag range selection,
   keyboard navigation (arrows, Shift, Home/End, Page, Ctrl/Command corners),
   and double-click/F2/typing editing;

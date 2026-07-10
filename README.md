@@ -48,6 +48,19 @@ bun run test
 bun run build
 ```
 
+## Deploy
+
+The Cloudflare Pages project is `sheets-website` at
+<https://sheets-website.pages.dev>. With an authenticated Wrangler session:
+
+```bash
+bun run build
+bun run deploy
+```
+
+The deployment script streams Wrangler output, detects both legacy and v4
+success messages, and exits instead of waiting indefinitely for Wrangler logs.
+
 ## Repository family
 
 This repository lives in the `vectojs-native/sheets/` forge family. The future

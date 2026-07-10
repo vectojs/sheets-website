@@ -33,6 +33,11 @@ describe("parser", () => {
     expect(run('"he said ""hi"""')).toBe('he said "hi"');
   });
 
+  it("concatenates scalars with the Sheets ampersand operator", () => {
+    expect(run('"Q"&A1&2', { "0:0": "1" })).toBe("Q12");
+    expect(run('A2&"x"', {})).toBe("x");
+  });
+
   it("rejects malformed input with ParseError", () => {
     for (const bad of ["2+", "SUM(1", ")", "2 3", "@#!"]) {
       expect(() => parse(bad)).toThrow(ParseError);

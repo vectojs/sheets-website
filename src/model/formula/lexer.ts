@@ -11,7 +11,7 @@ export interface Token {
 const REF_RE = /^\$?[A-Z]{1,3}\$?\d+/;
 const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*/;
 const NUM_RE = /^\d+(\.\d+)?|^\.\d+/;
-const OPS = new Set(["+", "-", "*", "/", "^", "%", "(", ")", ",", ":"]);
+const OPS = new Set(["+", "-", "*", "/", "^", "%", "&", "(", ")", ",", ":"]);
 
 export class LexError extends Error {}
 

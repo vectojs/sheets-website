@@ -1,7 +1,16 @@
 {
-  "name": "native-sheets",
+  "name": "sheets-website",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vectojs/sheets-website.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vectojs/sheets-website/issues"
+  },
+  "homepage": "https://github.com/vectojs/sheets-website#readme",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

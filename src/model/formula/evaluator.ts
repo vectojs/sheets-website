@@ -77,10 +77,10 @@ export function evaluate(node: Node, ctx: EvalContext): Value {
       if (isErr(l)) return l;
       const r = evaluate(node.r, ctx);
       if (isErr(r)) return r;
+      if (node.op === "&") return toText(l) + toText(r);
       if (node.op === "+" && (typeof l === "string" || typeof r === "string")) {
         // String + string concatenates only when both sides are non-numeric
-        // strings? Sheets actually errors; we take the pragmatic CONCAT-lite
-        // path for `&`-less v1: numbers still add, otherwise #VALUE!.
+        // strings? Sheets errors; numbers still add, otherwise #VALUE!.
         const ln = toNumber(l);
         const rn = toNumber(r);
         if (isErr(ln) || isErr(rn)) return err("#VALUE!");
@@ -109,6 +109,12 @@ export function evaluate(node: Node, ctx: EvalContext): Value {
       return fn(node.args, ctx);
     }
   }
+}
+
+function toText(value: Value): string {
+  if (value === null) return "";
+  if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
+  return String(value);
 }
 
 /** Collect every cell/range a parsed formula references (for the dep graph). */

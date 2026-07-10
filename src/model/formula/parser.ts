@@ -12,7 +12,7 @@ export type Node =
   | { t: "str"; v: string }
   | { t: "ref"; row: number; col: number }
   | { t: "range"; rect: Rect }
-  | { t: "bin"; op: "+" | "-" | "*" | "/" | "^"; l: Node; r: Node }
+  | { t: "bin"; op: "+" | "-" | "*" | "/" | "^" | "&"; l: Node; r: Node }
   | { t: "neg"; e: Node }
   | { t: "pct"; e: Node }
   | { t: "call"; name: string; args: Node[] };
@@ -41,9 +41,9 @@ export function parse(src: string): Node {
     let l = mulExpr();
     while (
       peek().type === "op" &&
-      (peek().text === "+" || peek().text === "-")
+      (peek().text === "+" || peek().text === "-" || peek().text === "&")
     ) {
-      const op = next().text as "+" | "-";
+      const op = next().text as "+" | "-" | "&";
       l = { t: "bin", op, l, r: mulExpr() };
     }
     return l;

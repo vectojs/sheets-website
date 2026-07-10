@@ -38,3 +38,8 @@ All notable changes to this project are documented in this file.
   structural history, formula-reference rewriting, and viewport-bound
   reconciliation. Narrow viewports keep those controls while compacting
   lower-priority export buttons.
+- Exact-pinned `@vectojs/sheets-core@0.3.0` with sparse persistent row/column
+  metrics, structural remapping, and undoable axis-size history.
+- Canvas header-edge resize and selection fill-handle gestures with live VMT
+  previews, one-transaction commits, variable-size virtualization, and
+  125%/150% scale verification.

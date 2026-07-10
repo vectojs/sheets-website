@@ -39,6 +39,9 @@ package; this repository owns only the VectoJS UI/UX adapter.
   A1-style formula-reference rewriting, and transactional undo/redo. The
   Canvas toolbar keeps these document commands on narrow screens while
   compacting lower-priority export controls.
+- sparse per-row and per-column logical sizes, Canvas header-edge resize
+  gestures, and a selection fill handle. Gesture previews remain numeric VMT
+  state; releasing the pointer creates one undoable document transaction.
 
 - responsive container measurement and `?debug` VMT inspection/audit.
 

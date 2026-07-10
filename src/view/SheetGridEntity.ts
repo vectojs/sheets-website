@@ -3,7 +3,9 @@ import { colName, SheetModel } from "@vectojs/sheets-core";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 
 export interface SheetGridEvents {
-  onCellPointer?: (cell: CellPosition, extend: boolean) => void;
+  onCellPointerDown?: (cell: CellPosition, extend: boolean) => void;
+  onCellPointerMove?: (cell: CellPosition) => void;
+  onCellPointerUp?: () => void;
   onScroll?: (deltaX: number, deltaY: number) => void;
 }
 
@@ -39,6 +41,8 @@ export function selectionPixelRect(viewport: SheetViewport): {
  * a matching entity tree or a DOM cell grid.
  */
 export class SheetGridEntity extends Entity {
+  private pointerDragging = false;
+
   constructor(
     readonly model: SheetModel,
     readonly viewport: SheetViewport,
@@ -51,9 +55,33 @@ export class SheetGridEntity extends Entity {
       (event: { localX?: number; localY?: number; shiftKey?: boolean }) => {
         if (event.localX === undefined || event.localY === undefined) return;
         const cell = this.viewport.cellAt(event.localX, event.localY);
-        if (cell) this.events.onCellPointer?.(cell, event.shiftKey ?? false);
+        if (!cell) return;
+        this.pointerDragging = true;
+        this.events.onCellPointerDown?.(cell, event.shiftKey ?? false);
       },
     );
+    this.on("pointermove", (event: { localX?: number; localY?: number }) => {
+      if (
+        !this.pointerDragging ||
+        event.localX === undefined ||
+        event.localY === undefined
+      )
+        return;
+      const cell = this.viewport.cellAt(event.localX, event.localY);
+      if (cell) this.events.onCellPointerMove?.(cell);
+    });
+    this.on("pointerup", () => {
+      if (!this.pointerDragging) return;
+      this.pointerDragging = false;
+      this.events.onCellPointerUp?.();
+    });
+    this.on("pointerleave", () => {
+      // Pointer capture on the projected grid keeps normal drags alive after
+      // leaving its bounds. This reset covers synthetic/non-captured events.
+      if (!this.pointerDragging) return;
+      this.pointerDragging = false;
+      this.events.onCellPointerUp?.();
+    });
     this.on(
       "wheel",
       (event: { deltaX?: number; deltaY?: number; preventDefault(): void }) => {

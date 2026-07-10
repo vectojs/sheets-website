@@ -39,6 +39,18 @@ export class SheetController {
     this.viewport.ensureVisible(this.viewport.selected);
   }
 
+  pageSelection(direction: -1 | 1, extend = false): void {
+    this.moveSelection(direction * this.viewport.pageRows(), 0, extend);
+  }
+
+  selectAll(): void {
+    const used = this.model.getUsedRange();
+    if (!used) return;
+    this.viewport.select({ row: used.r1, col: used.c1 });
+    this.viewport.extendSelection({ row: used.r2, col: used.c2 });
+    this.viewport.ensureVisible(this.viewport.selected);
+  }
+
   scroll(deltaX: number, deltaY: number): void {
     this.viewport.scrollBy(deltaX, deltaY);
   }
@@ -91,11 +103,9 @@ export class SheetController {
 
   clearSelection(): void {
     const range = this.viewport.selectionRange();
-    const writes = [];
-    for (let row = range.r1; row <= range.r2; row++) {
-      for (let col = range.c1; col <= range.c2; col++)
-        writes.push({ row, col, raw: "" });
-    }
+    const writes = this.model
+      .getCellsInRange(range)
+      .map(({ row, col }) => ({ row, col, raw: "" }));
     this.history.apply(writes);
   }
 }
@@ -111,6 +121,7 @@ export class SheetsApp {
   private lastPointer: { cell: CellPosition; at: number } | null = null;
   private readonly keyboardListener: (event: KeyboardEvent) => void;
   private readonly copyListener: (event: ClipboardEvent) => void;
+  private readonly cutListener: (event: ClipboardEvent) => void;
   private readonly pasteListener: (event: ClipboardEvent) => void;
 
   constructor(
@@ -125,7 +136,9 @@ export class SheetsApp {
     });
     this.controller = new SheetController(model, this.viewport);
     this.grid = new SheetGridEntity(model, this.viewport, {
-      onCellPointer: (cell, extend) => this.handleCellPointer(cell, extend),
+      onCellPointerDown: (cell, extend) =>
+        this.handleCellPointerDown(cell, extend),
+      onCellPointerMove: (cell) => this.handleCellPointerMove(cell),
       onScroll: (x, y) => {
         this.controller.scroll(x, y);
         this.scene.markDirty();
@@ -155,10 +168,12 @@ export class SheetsApp {
     this.syncFormulaBar();
     this.keyboardListener = (event) => this.handleKeyboard(event);
     this.copyListener = (event) => this.handleCopy(event);
+    this.cutListener = (event) => this.handleCut(event);
     this.pasteListener = (event) => this.handlePaste(event);
     if (typeof window !== "undefined") {
       window.addEventListener("keydown", this.keyboardListener);
       window.addEventListener("copy", this.copyListener);
+      window.addEventListener("cut", this.cutListener);
       window.addEventListener("paste", this.pasteListener);
     }
   }
@@ -176,12 +191,13 @@ export class SheetsApp {
     if (typeof window !== "undefined") {
       window.removeEventListener("keydown", this.keyboardListener);
       window.removeEventListener("copy", this.copyListener);
+      window.removeEventListener("cut", this.cutListener);
       window.removeEventListener("paste", this.pasteListener);
     }
     this.removeEditor(false);
   }
 
-  private handleCellPointer(cell: CellPosition, extend: boolean): void {
+  private handleCellPointerDown(cell: CellPosition, extend: boolean): void {
     const now = performance.now();
     const isDoublePointer =
       this.lastPointer !== null &&
@@ -196,9 +212,23 @@ export class SheetsApp {
     this.scene.markDirty();
   }
 
+  private handleCellPointerMove(cell: CellPosition): void {
+    if (this.editor) return;
+    this.controller.extendSelection(cell);
+    this.scene.markDirty();
+  }
+
   private handleKeyboard(event: KeyboardEvent): void {
     if (isNativeTextTarget(event.target)) return;
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+    const modifier = event.ctrlKey || event.metaKey;
+    if (modifier && event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      this.controller.selectAll();
+      this.syncFormulaBar();
+      this.scene.markDirty();
+      return;
+    }
+    if (modifier && event.key.toLowerCase() === "z") {
       event.preventDefault();
       if (event.shiftKey) this.controller.redo();
       else this.controller.undo();
@@ -206,9 +236,35 @@ export class SheetsApp {
       this.scene.markDirty();
       return;
     }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") {
+    if (modifier && event.key.toLowerCase() === "y") {
       event.preventDefault();
       this.controller.redo();
+      this.syncFormulaBar();
+      this.scene.markDirty();
+      return;
+    }
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const target = modifier
+        ? event.key === "Home"
+          ? { row: 0, col: 0 }
+          : { row: this.model.rows - 1, col: this.model.cols - 1 }
+        : {
+            row: this.viewport.selected.row,
+            col: event.key === "Home" ? 0 : this.model.cols - 1,
+          };
+      if (event.shiftKey) this.controller.extendSelection(target);
+      else this.controller.select(target);
+      this.syncFormulaBar();
+      this.scene.markDirty();
+      return;
+    }
+    if (event.key === "PageUp" || event.key === "PageDown") {
+      event.preventDefault();
+      this.controller.pageSelection(
+        event.key === "PageUp" ? -1 : 1,
+        event.shiftKey,
+      );
       this.syncFormulaBar();
       this.scene.markDirty();
       return;
@@ -261,6 +317,15 @@ export class SheetsApp {
     if (isNativeTextTarget(document.activeElement)) return;
     event.preventDefault();
     event.clipboardData?.setData("text/plain", this.controller.copySelection());
+  }
+
+  private handleCut(event: ClipboardEvent): void {
+    if (isNativeTextTarget(document.activeElement)) return;
+    event.preventDefault();
+    event.clipboardData?.setData("text/plain", this.controller.copySelection());
+    this.controller.clearSelection();
+    this.syncFormulaBar();
+    this.scene.markDirty();
   }
 
   private handlePaste(event: ClipboardEvent): void {

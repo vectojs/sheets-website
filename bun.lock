@@ -6,7 +6,7 @@
       "name": "native-sheets",
       "dependencies": {
         "@vectojs/core": "1.0.1",
-        "@vectojs/sheets-core": "0.1.0",
+        "@vectojs/sheets-core": "0.1.1",
         "@vectojs/ui": "1.1.2",
       },
       "devDependencies": {
@@ -258,7 +258,7 @@
 
     "@vectojs/devtools": ["@vectojs/devtools@0.2.0", "", { "peerDependencies": { "@vectojs/core": ">=1.0.0 <2.0.0", "@vectojs/ui": ">=1.0.0 <2.0.0" } }, "sha512-Dm1t4Nl482Gk+8HntSnjKODt6ZAixd8bG7tMqyxEkRqiuJrLnOQZ7MfuuimWN8hty8kIsxyB2jR5bhY/UWPukw=="],
 
-    "@vectojs/sheets-core": ["@vectojs/sheets-core@0.1.0", "", {}, "sha512-ocJw3I6TL42Q//rdGKa62cmQs16Yrpf1ZiVjT107gOBogWToUovJokrwWl9kcDP4TMy4yW14VpMH/cX4Xwxvvg=="],
+    "@vectojs/sheets-core": ["@vectojs/sheets-core@0.1.1", "", {}, "sha512-ZFOWsAcpHxMsVzwgnAGUjUPvJyxg6/DEzh2cNsk8YQsWWYxNUOoBbfANhHvvWzz0gLOpjUJcsYma20+vALhT6Q=="],
 
     "@vectojs/ui": ["@vectojs/ui@1.1.2", "", { "dependencies": { "marked": "^18.0.5" }, "peerDependencies": { "@vectojs/core": ">=0.1.0" } }, "sha512-HMrzAmSFK9OatoM8w/87YqPEFnnMxLLJwsXoHizuODy27+Wd6FcZUlIFv9vLFCP4ujM1qzPb1AZSUjN4Em/Vgg=="],
 

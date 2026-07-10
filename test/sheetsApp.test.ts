@@ -92,6 +92,39 @@ describe("SheetController", () => {
     expect(model.getRaw(0, 0)).toBe("left");
     expect(model.getRaw(0, 1)).toBe("right");
   });
+
+  it("clears only stored cells when a large range is selected", () => {
+    const { model, controller } = createController();
+    model.setCell(0, 0, "first");
+    model.setCell(19, 9, "last");
+    controller.select({ row: 0, col: 0 });
+    controller.extendSelection({ row: 19, col: 9 });
+
+    controller.clearSelection();
+
+    expect(model.cellCount).toBe(0);
+    controller.undo();
+    expect(model.getRaw(0, 0)).toBe("first");
+    expect(model.getRaw(19, 9)).toBe("last");
+  });
+
+  it("selects the used range and pages through the viewport", () => {
+    const { model, controller } = createController();
+    model.setCell(2, 1, "left");
+    model.setCell(10, 5, "right");
+
+    controller.selectAll();
+    expect(controller.viewport.selectionRange()).toEqual({
+      r1: 2,
+      c1: 1,
+      r2: 10,
+      c2: 5,
+    });
+
+    controller.select({ row: 0, col: 0 });
+    controller.pageSelection(1);
+    expect(controller.viewport.selected).toEqual({ row: 5, col: 0 });
+  });
 });
 
 describe("SheetsApp", () => {

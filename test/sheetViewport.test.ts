@@ -89,4 +89,16 @@ describe("SheetViewport", () => {
     expect(view.selectionRange()).toEqual({ r1: 1, c1: 1, r2: 4, c2: 3 });
     expect(view.selected).toEqual({ row: 1, col: 1 });
   });
+
+  it("derives a page navigation stride from the visible body", () => {
+    const view = new SheetViewport({
+      rows: 100,
+      cols: 10,
+      rowHeight: 24,
+      colWidth: 100,
+    });
+    view.resize(340, 148);
+
+    expect(view.pageRows()).toBe(5);
+  });
 });

@@ -56,3 +56,43 @@ test("resizes from the layout container at a narrow viewport", async ({
     )
     .toEqual({ scene: [375, 667], canvas: [375, 667], audit: [] });
 });
+
+test("drags a canvas range and applies spreadsheet navigation shortcuts", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const grid = page.getByRole("application", { name: /Spreadsheet grid/ });
+  const box = await grid.boundingBox();
+  if (!box) throw new Error("Spreadsheet grid a11y surface is not measurable");
+
+  // A1 → C3. Coordinates are derived from the fixed header and explicit cell
+  // dimensions, not a DOM table or a screenshot.
+  await page.mouse.move(box.x + 48, box.y + 36);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 48 + 2 * 112, box.y + 36 + 2 * 24);
+  await page.mouse.up();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        selection: window.__app?.app.viewport.selectionRange(),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({ selection: { r1: 0, c1: 0, r2: 2, c2: 2 }, audit: [] });
+
+  await page.keyboard.press("Home");
+  await page.keyboard.press("PageDown");
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.press("Control+End");
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        active: window.__app?.app.viewport.selected,
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({ active: { row: 9999, col: 99 }, audit: [] });
+});

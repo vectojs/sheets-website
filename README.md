@@ -17,10 +17,13 @@ package; this repository owns only the VectoJS UI/UX adapter.
 - sparse formula document with scalar/range dependencies and cycle detection;
 - formulas with arithmetic, percent, exponentiation, text concatenation, and
   `SUM`, `AVG`/`AVERAGE`, `MIN`, `MAX`, `COUNT`, `IF`, and `CONCAT`;
-- virtualized grid, fixed headers, scrolling, cell/range selection, keyboard
-  navigation, and double-click/F2/typing editing;
+- virtualized grid, fixed headers, scrolling, pointer-drag range selection,
+  keyboard navigation (arrows, Shift, Home/End, Page, Ctrl/Command corners),
+  and double-click/F2/typing editing;
 - native IME, clipboard, selection, and undo support through VectoJS `Input`;
 - TSV copy/paste, range clearing, and transactional undo/redo;
+- Ctrl/Command+A selection of the sparse used range plus Ctrl/Command+X/C/V
+  and Z/Y document shortcuts, without creating writes for blank cells;
 - responsive container measurement and `?debug` VMT inspection/audit.
 
 This forge intentionally excludes collaboration, cloud persistence, comments,

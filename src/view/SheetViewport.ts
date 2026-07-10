@@ -132,6 +132,11 @@ export class SheetViewport {
     };
   }
 
+  /** Number of complete rows exposed by the current canvas body. */
+  pageRows(): number {
+    return Math.max(1, Math.floor(this.bodyHeight() / this.rowHeight));
+  }
+
   cellAt(localX: number, localY: number): CellPosition | null {
     if (localX < this.rowHeaderWidth || localY < this.columnHeaderHeight)
       return null;

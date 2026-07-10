@@ -15,3 +15,4 @@ All notable changes to this project are documented in this file.
 - Workbook tabs, sheet creation, and local versioned snapshot restoration.
 - Canvas-rendered cell formatting with selection-wide Ctrl/Command+B/I actions
   and format-aware undo/redo.
+- Exact-pinned core upgrade with versioned workbook JSON and CSV exchange.

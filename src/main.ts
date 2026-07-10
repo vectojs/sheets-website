@@ -48,7 +48,9 @@ const createDemoWorkbook = (): Workbook => {
   return workbook;
 };
 const workbook = restoreWorkbook(window.localStorage, createDemoWorkbook);
-const app = new NumeraApp(scene, workbook);
+const app = new NumeraApp(scene, workbook, {
+  onWorkbookChanged: (next) => persistWorkbook(window.localStorage, next),
+});
 
 const resize = (): void => {
   const { width, height } = measureSceneContainer(container);
@@ -64,7 +66,9 @@ window.__app = {
   get model() {
     return app.model;
   },
-  workbook,
+  get workbook() {
+    return app.workbook;
+  },
   app,
   audit: () => auditScene(scene),
 };
@@ -80,7 +84,7 @@ if (new URLSearchParams(window.location.search).has("debug")) {
 window.addEventListener(
   "beforeunload",
   () => {
-    persistWorkbook(window.localStorage, workbook);
+    persistWorkbook(window.localStorage, app.workbook);
     observer.disconnect();
     app.destroy();
     scene.destroy();

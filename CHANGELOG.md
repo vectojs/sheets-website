@@ -12,6 +12,9 @@ All notable changes to this project are documented in this file.
   and personal productivity; cloud collaboration remains outside product scope.
 - Exact-pinned `@vectojs/numera-core@0.3.1` for Excel-compatible boolean cell
   literals required by XLSX exchange.
+- Exact-pinned `@vectojs/numera-xlsx@0.1.0` with Canvas import/export actions,
+  transient native file I/O, typed corrupt-file feedback, and lazy OOXML codec
+  loading so ordinary spreadsheet startup does not load ExcelJS.
 
 ### Fixed
 

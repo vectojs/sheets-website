@@ -3,6 +3,8 @@ import { Entity, type A11yAttributes, type IRenderer } from "@vectojs/core";
 export type SheetToolbarAction =
   | "export-json"
   | "export-csv"
+  | "import-xlsx"
+  | "export-xlsx"
   | "insert-row"
   | "delete-row"
   | "insert-column"
@@ -22,6 +24,8 @@ const WIDE_BUTTONS: readonly ToolbarButton[] = [
   { id: "delete-row", label: "−R", x: 156, width: 40 },
   { id: "insert-column", label: "+C", x: 200, width: 40 },
   { id: "delete-column", label: "−C", x: 244, width: 40 },
+  { id: "import-xlsx", label: "Import", x: 292, width: 60 },
+  { id: "export-xlsx", label: "XLSX", x: 356, width: 58 },
 ] as const;
 
 const COMPACT_BUTTONS: readonly ToolbarButton[] = [
@@ -34,6 +38,7 @@ const COMPACT_BUTTONS: readonly ToolbarButton[] = [
 /** Canvas structural and export controls supplied by the application adapter. */
 export class SheetToolbarEntity extends Entity {
   private compact = false;
+  private status = "";
 
   constructor(private readonly onAction: (action: SheetToolbarAction) => void) {
     super();
@@ -61,6 +66,10 @@ export class SheetToolbarEntity extends Entity {
     this.compact = compact;
   }
 
+  setStatus(status: string): void {
+    this.status = status;
+  }
+
   isPointInside(sceneX: number, sceneY: number): boolean {
     const local = this.worldToLocal(sceneX, sceneY);
     return (
@@ -75,7 +84,9 @@ export class SheetToolbarEntity extends Entity {
   getA11yAttributes(): A11yAttributes {
     return {
       role: "toolbar",
-      label: "Spreadsheet structure and export toolbar",
+      label: this.status
+        ? `Spreadsheet structure and export toolbar. ${this.status}`
+        : "Spreadsheet structure and export toolbar",
     };
   }
 
@@ -93,6 +104,23 @@ export class SheetToolbarEntity extends Entity {
         28,
         "600 12px Inter, sans-serif",
         "#334155",
+      );
+    }
+    if (this.status) {
+      const maximumCharacters = Math.max(
+        1,
+        Math.floor((this.width - 16) / 6.5),
+      );
+      const text =
+        this.status.length > maximumCharacters
+          ? `${this.status.slice(0, Math.max(0, maximumCharacters - 1))}…`
+          : this.status;
+      renderer.fillText(
+        text,
+        8,
+        56,
+        "500 11px Inter, sans-serif",
+        this.status.startsWith("Import failed") ? "#b91c1c" : "#475569",
       );
     }
   }

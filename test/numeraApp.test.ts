@@ -311,4 +311,24 @@ describe("NumeraApp", () => {
       c2: 0,
     });
   });
+
+  it("replaces the workbook and rebuilds the Canvas adapters after an import", () => {
+    const scene = {
+      width: 440,
+      height: 300,
+      add: () => scene,
+      markDirty: () => undefined,
+      remove: () => scene,
+      resize: () => undefined,
+    };
+    const app = new NumeraApp(scene as never, new Workbook({ name: "Before" }));
+    const replacement = new Workbook({ name: "Imported", rows: 20, cols: 10 });
+    replacement.activeSheet.model.setCell(0, 0, "XLSX value");
+
+    app.replaceWorkbook(replacement);
+
+    expect(app.workbook.activeSheet.name).toBe("Imported");
+    expect(app.model.getRaw(0, 0)).toBe("XLSX value");
+    expect(app.formulaBar.value).toBe("XLSX value");
+  });
 });

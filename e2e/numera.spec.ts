@@ -1,4 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { Workbook } from "@vectojs/numera-core";
+import { encodeXlsx } from "@vectojs/numera-xlsx";
+
+async function importFixture(): Promise<Uint8Array> {
+  const workbook = new Workbook({ name: "Imported", rows: 20, cols: 10 });
+  workbook.activeSheet.model.setCell(0, 0, "Loaded from XLSX");
+  workbook.activeSheet.model.setCell(0, 1, "=1+2");
+  workbook.addSheet("Second").model.setCell(0, 0, "More data");
+  return encodeXlsx(workbook);
+}
 
 test("keeps document, VMT semantics, and audit state aligned while editing", async ({
   page,
@@ -243,6 +253,69 @@ test("switches and creates workbook sheets through the canvas tab strip", async 
       })),
     )
     .toEqual({ active: "Sheet 3", count: 3, audit: [] });
+});
+
+test("imports and exports an XLSX workbook through Canvas toolbar intentions", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const toolbar = page.getByRole("toolbar", { name: /structure and export/ });
+  const box = await toolbar.boundingBox();
+  if (!box) throw new Error("Spreadsheet toolbar is not measurable");
+
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.mouse.click(box.x + 322, box.y + 24);
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name: "imported.xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from(await importFixture()),
+  });
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        sheets: window.__app?.workbook.sheets.map((sheet) => sheet.name),
+        raw: window.__app?.model.getRaw(0, 0),
+        display: window.__app?.model.getDisplay(0, 1),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({
+      sheets: ["Imported", "Second"],
+      raw: "Loaded from XLSX",
+      display: "3",
+      audit: [],
+    });
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.mouse.click(box.x + 385, box.y + 24);
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("numera-workbook.xlsx");
+});
+
+test("reports corrupt XLSX imports through the Canvas toolbar state", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const toolbar = page.getByRole("toolbar", { name: /structure and export/ });
+  const box = await toolbar.boundingBox();
+  if (!box) throw new Error("Spreadsheet toolbar is not measurable");
+
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.mouse.click(box.x + 322, box.y + 24);
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name: "corrupt.xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from([1, 2, 3]),
+  });
+
+  await expect(
+    page.getByRole("toolbar", { name: /Import failed \(INVALID_ARCHIVE\)/ }),
+  ).toBeVisible();
 });
 
 test("renames and deletes a sheet through the canvas tab strip", async ({

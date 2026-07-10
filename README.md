@@ -35,6 +35,10 @@ package; this repository owns only the VectoJS UI/UX adapter.
 - versioned workbook JSON plus formula-preserving RFC 4180 CSV serialization
   primitives, with canvas JSON/CSV copy controls and CSV paste import, shared
   by future CLI and MCP adapters.
+- Canvas-native `Import` and `XLSX` toolbar intentions backed by the exact
+  published `@vectojs/numera-xlsx@0.1.0` adapter. Native file selection and
+  download elements are transient browser I/O only; the visible toolbar,
+  status feedback, workbook replacement, and VMT refresh stay Canvas-native.
 - structural row and column insertion/deletion with sparse-format preservation,
   A1-style formula-reference rewriting, and transactional undo/redo. The
   Canvas toolbar keeps these document commands on narrow screens while
@@ -44,6 +48,9 @@ package; this repository owns only the VectoJS UI/UX adapter.
   state; releasing the pointer creates one undoable document transaction.
 
 - responsive container measurement and `?debug` VMT inspection/audit.
+
+The XLSX codec is loaded only after an import/export action, keeping the normal
+initial application chunk focused on the interactive spreadsheet.
 
 Numera intentionally excludes collaboration, cloud persistence, accounts,
 sharing, comments, permissions, and platform scripting. Microsoft Excel is the

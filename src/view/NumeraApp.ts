@@ -17,12 +17,30 @@ import { SheetGridEntity } from "./SheetGridEntity";
 import { SheetTabsEntity } from "./SheetTabsEntity";
 import { SheetToolbarEntity } from "./SheetToolbarEntity";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
+import {
+  createBrowserXlsxFileBridge,
+  type XlsxFileBridge,
+} from "./xlsxFileBridge";
 
-const TOOLBAR_HEIGHT = 48;
-const TOOLBAR_WIDTH = 292;
+const TOOLBAR_HEIGHT = 64;
+const TOOLBAR_WIDTH = 422;
 const COMPACT_TOOLBAR_WIDTH = 188;
 const COMPACT_TOOLBAR_BREAKPOINT = 480;
 const TABS_HEIGHT = 32;
+
+export interface NumeraAppOptions {
+  fileBridge?: XlsxFileBridge;
+  onWorkbookChanged?: (workbook: Workbook) => void;
+}
+
+const unavailableFileBridge: XlsxFileBridge = {
+  chooseXlsx: async () => {
+    throw new Error("XLSX import requires a browser file chooser.");
+  },
+  downloadXlsx: () => {
+    throw new Error("XLSX export requires a browser download adapter.");
+  },
+};
 
 /** Pure interaction state shared by canvas input and the native editor. */
 export class SheetController {
@@ -228,10 +246,11 @@ export class SheetController {
 
 /** Canvas shell, formula bar and short-lived native cell editor. */
 export class NumeraApp {
+  workbook: Workbook;
   viewport: SheetViewport;
   controller: SheetController;
   grid: SheetGridEntity;
-  readonly tabs: SheetTabsEntity;
+  tabs: SheetTabsEntity;
   readonly toolbar: SheetToolbarEntity;
   readonly formulaBar: Input;
 
@@ -242,11 +261,22 @@ export class NumeraApp {
   private readonly copyListener: (event: ClipboardEvent) => void;
   private readonly cutListener: (event: ClipboardEvent) => void;
   private readonly pasteListener: (event: ClipboardEvent) => void;
+  private readonly fileBridge: XlsxFileBridge;
+  private readonly onWorkbookChanged:
+    ((workbook: Workbook) => void) | undefined;
 
   constructor(
     readonly scene: Scene,
-    readonly workbook: Workbook,
+    workbook: Workbook,
+    options: NumeraAppOptions = {},
   ) {
+    this.workbook = workbook;
+    this.fileBridge =
+      options.fileBridge ??
+      (typeof document === "undefined"
+        ? unavailableFileBridge
+        : createBrowserXlsxFileBridge(document));
+    this.onWorkbookChanged = options.onWorkbookChanged;
     const model = workbook.activeSheet.model;
     this.viewport = new SheetViewport({
       rows: model.rows,
@@ -258,15 +288,10 @@ export class NumeraApp {
     });
     this.controller = new SheetController(model, this.viewport);
     this.grid = this.createGrid(model);
-    this.tabs = new SheetTabsEntity(workbook, {
-      onSelect: (id) => this.selectSheet(id),
-      onAdd: () => this.addSheet(),
-      onRename: (id) => this.beginSheetRename(id),
-      onDelete: (id) => this.deleteSheet(id),
+    this.tabs = this.createTabs();
+    this.toolbar = new SheetToolbarEntity((action) => {
+      void this.handleToolbarAction(action);
     });
-    this.toolbar = new SheetToolbarEntity((action) =>
-      this.handleToolbarAction(action),
-    );
     this.formulaBar = new Input({
       width: 320,
       height: 32,
@@ -321,6 +346,17 @@ export class NumeraApp {
 
   get model(): SheetModel {
     return this.workbook.activeSheet.model;
+  }
+
+  /** Replace all document-owned adapters only after a complete decode succeeds. */
+  replaceWorkbook(workbook: Workbook): void {
+    this.removeEditor(true);
+    this.removeTabEditor(true);
+    this.scene.remove(this.tabs);
+    this.workbook = workbook;
+    this.tabs = this.createTabs();
+    this.scene.add(this.tabs);
+    this.rebuildActiveSheet();
   }
 
   selectSheet(id: string): void {
@@ -403,6 +439,15 @@ export class NumeraApp {
         this.scene.markDirty();
       },
       onGestureChange: () => this.scene.markDirty(),
+    });
+  }
+
+  private createTabs(): SheetTabsEntity {
+    return new SheetTabsEntity(this.workbook, {
+      onSelect: (id) => this.selectSheet(id),
+      onAdd: () => this.addSheet(),
+      onRename: (id) => this.beginSheetRename(id),
+      onDelete: (id) => this.deleteSheet(id),
     });
   }
 
@@ -689,15 +734,21 @@ export class NumeraApp {
     void navigator.clipboard?.writeText(content);
   }
 
-  private handleToolbarAction(
+  private async handleToolbarAction(
     action: import("./SheetToolbarEntity").SheetToolbarAction,
-  ): void {
+  ): Promise<void> {
     switch (action) {
       case "export-json":
         this.copyExport("json");
         return;
       case "export-csv":
         this.copyExport("csv");
+        return;
+      case "import-xlsx":
+        await this.importXlsx();
+        return;
+      case "export-xlsx":
+        await this.exportXlsx();
         return;
       case "insert-row":
         this.controller.insertRows();
@@ -713,6 +764,48 @@ export class NumeraApp {
         break;
     }
     this.syncFormulaBar();
+    this.scene.markDirty();
+  }
+
+  private async importXlsx(): Promise<void> {
+    this.toolbar.setStatus("Opening XLSX file chooser…");
+    this.scene.markDirty();
+    try {
+      const bytes = await this.fileBridge.chooseXlsx();
+      if (!bytes) {
+        this.toolbar.setStatus("XLSX import cancelled.");
+        this.scene.markDirty();
+        return;
+      }
+      const { decodeXlsx } = await import("@vectojs/numera-xlsx");
+      const workbook = await decodeXlsx(bytes);
+      this.replaceWorkbook(workbook);
+      this.onWorkbookChanged?.(workbook);
+      this.toolbar.setStatus(
+        `Imported ${workbook.sheets.length} XLSX sheet${workbook.sheets.length === 1 ? "" : "s"}.`,
+      );
+    } catch (error) {
+      const { XlsxError } = await import("@vectojs/numera-xlsx");
+      this.toolbar.setStatus(
+        error instanceof XlsxError
+          ? `Import failed (${error.code}).`
+          : "Import failed.",
+      );
+    }
+    this.scene.markDirty();
+  }
+
+  private async exportXlsx(): Promise<void> {
+    this.toolbar.setStatus("Preparing XLSX export…");
+    this.scene.markDirty();
+    try {
+      const { encodeXlsx } = await import("@vectojs/numera-xlsx");
+      const bytes = await encodeXlsx(this.workbook);
+      this.fileBridge.downloadXlsx(bytes, "numera-workbook.xlsx");
+      this.toolbar.setStatus("XLSX download started.");
+    } catch {
+      this.toolbar.setStatus("XLSX export failed.");
+    }
     this.scene.markDirty();
   }
 }

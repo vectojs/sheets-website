@@ -42,7 +42,7 @@ VectoJS devtools panel. The app also exposes `window.__app` with its `scene`,
 ```bash
 bun run format:check
 bun run lint
-bun test
+bun run test
 bun run build
 ```
 

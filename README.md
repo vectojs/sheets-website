@@ -31,7 +31,8 @@ package; this repository owns only the VectoJS UI/UX adapter.
   alignment, and number/currency/percent display, with Ctrl/Command+B/I and
   transactional undo/redo.
 - versioned workbook JSON plus formula-preserving RFC 4180 CSV serialization
-  primitives, shared by future import/export, CLI, and MCP adapters.
+  primitives, with canvas JSON/CSV copy controls and CSV paste import, shared
+  by future CLI and MCP adapters.
 - responsive container measurement and `?debug` VMT inspection/audit.
 
 This forge intentionally excludes collaboration, cloud persistence, comments,

@@ -3,13 +3,17 @@ import { Input } from "@vectojs/ui";
 import {
   type CellFormat,
   copyRange,
+  fromCsv,
   pasteText,
   SheetHistory,
   SheetModel,
+  toCsv,
+  toWorkbookJson,
   Workbook,
 } from "@vectojs/sheets-core";
 import { SheetGridEntity } from "./SheetGridEntity";
 import { SheetTabsEntity } from "./SheetTabsEntity";
+import { SheetToolbarEntity } from "./SheetToolbarEntity";
 import { type CellPosition, SheetViewport } from "./SheetViewport";
 
 const TOOLBAR_HEIGHT = 48;
@@ -130,6 +134,7 @@ export class SheetsApp {
   controller: SheetController;
   grid: SheetGridEntity;
   readonly tabs: SheetTabsEntity;
+  readonly toolbar: SheetToolbarEntity;
   readonly formulaBar: Input;
 
   private editor: Input | null = null;
@@ -159,6 +164,7 @@ export class SheetsApp {
       onRename: (id) => this.beginSheetRename(id),
       onDelete: (id) => this.deleteSheet(id),
     });
+    this.toolbar = new SheetToolbarEntity((format) => this.copyExport(format));
     this.formulaBar = new Input({
       width: 320,
       height: 32,
@@ -179,6 +185,7 @@ export class SheetsApp {
     this.formulaBar.on("blur", () => this.commitFormulaBar());
 
     this.scene.add(this.grid);
+    this.scene.add(this.toolbar);
     this.scene.add(this.formulaBar);
     this.scene.add(this.tabs);
     this.syncFormulaBar();
@@ -198,8 +205,10 @@ export class SheetsApp {
     this.scene.resize(width, height);
     this.grid.setPosition(0, TOOLBAR_HEIGHT);
     this.grid.resize(width, Math.max(0, height - TOOLBAR_HEIGHT - TABS_HEIGHT));
-    this.formulaBar.setPosition(64, 8);
-    this.formulaBar.width = Math.max(120, width - 76);
+    this.toolbar.setPosition(0, 0);
+    this.toolbar.resize(112, TOOLBAR_HEIGHT);
+    this.formulaBar.setPosition(120, 8);
+    this.formulaBar.width = Math.max(120, width - 132);
     this.tabs.setPosition(0, Math.max(TOOLBAR_HEIGHT, height - TABS_HEIGHT));
     this.tabs.resize(width, TABS_HEIGHT);
     this.scene.markDirty();
@@ -483,7 +492,11 @@ export class SheetsApp {
     const text = event.clipboardData?.getData("text/plain");
     if (text === undefined) return;
     event.preventDefault();
-    this.controller.paste(text);
+    if (!text.includes("\t") && text.includes(","))
+      this.controller.history.apply(
+        fromCsv(text, this.viewport.selected, this.model),
+      );
+    else this.controller.paste(text);
     this.syncFormulaBar();
     this.scene.markDirty();
   }
@@ -543,6 +556,14 @@ export class SheetsApp {
   private syncFormulaBar(): void {
     const { row, col } = this.viewport.selected;
     this.formulaBar.value = this.model.getRaw(row, col);
+  }
+
+  private copyExport(format: "json" | "csv"): void {
+    const content =
+      format === "json"
+        ? toWorkbookJson(this.workbook)
+        : toCsv(this.model, this.viewport.selectionRange());
+    void navigator.clipboard?.writeText(content);
   }
 }
 

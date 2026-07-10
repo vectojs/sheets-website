@@ -17,3 +17,4 @@ All notable changes to this project are documented in this file.
   and format-aware undo/redo.
 - Exact-pinned core upgrade with versioned workbook JSON and CSV exchange.
 - Canvas tab rename/delete controls with temporary IME-safe editor input.
+- Canvas JSON/CSV export controls and comma-delimited clipboard import.

@@ -59,20 +59,31 @@ test("yields projected text copy and traces its content route", async ({
   page,
 }) => {
   await page.goto("/?debug");
-
-  const result = await page.evaluate(async () => {
+  const status = "Native selectable status";
+  await page.evaluate((text) => {
     const debug = window.__app;
     if (!debug) throw new Error("Numera debug surface is unavailable");
-    const status = "Native selectable status";
-    debug.app.toolbar.setStatus(status);
-    debug.scene.markDirty();
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => resolve()),
-    );
+    debug.app.toolbar.setStatus(text);
+  }, status);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (text) =>
+          Array.from(
+            document.querySelectorAll<HTMLElement>("[data-vecto-content]"),
+          ).some((element) => element.textContent === text),
+        status,
+      ),
+    )
+    .toBe(true);
+
+  const result = await page.evaluate(async (text) => {
+    const debug = window.__app;
+    if (!debug) throw new Error("Numera debug surface is unavailable");
 
     const content = Array.from(
       document.querySelectorAll<HTMLElement>("[data-vecto-content]"),
-    ).find((element) => element.textContent === status);
+    ).find((element) => element.textContent === text);
     if (!content) throw new Error("Projected toolbar status is unavailable");
 
     const range = document.createRange();
@@ -105,7 +116,7 @@ test("yields projected text copy and traces its content route", async ({
         .debugTrace?.()
         .findLast((entry) => entry.type === "pointerdown"),
     };
-  });
+  }, status);
 
   expect(result).toMatchObject({
     selection: "Native selectable status",

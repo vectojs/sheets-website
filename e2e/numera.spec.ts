@@ -218,6 +218,97 @@ test("resizes a row and fills cells through Canvas pointer gestures", async ({
     });
 });
 
+test("routes internal clipboard ranges through formula-aware Core transfer", async ({
+  page,
+}) => {
+  await page.goto("/?debug");
+  await page.evaluate(() => {
+    const app = window.__app?.app;
+    const model = window.__app?.model;
+    if (!app || !model) throw new Error("Numera debug surface is unavailable");
+    model.setCell(0, 0, "5");
+    model.setCell(0, 1, "=A1*2");
+    model.setFormat(0, 1, { bold: true, numberFormat: "currency" });
+    app.controller.select({ row: 0, col: 0 });
+    app.controller.extendSelection({ row: 0, col: 1 });
+
+    const clipboard = new DataTransfer();
+    const copyEvent = new Event("copy", { cancelable: true });
+    Object.defineProperty(copyEvent, "clipboardData", { value: clipboard });
+    window.dispatchEvent(copyEvent);
+    app.controller.select({ row: 2, col: 2 });
+    const pasteEvent = new Event("paste", { cancelable: true });
+    Object.defineProperty(pasteEvent, "clipboardData", { value: clipboard });
+    window.dispatchEvent(pasteEvent);
+  });
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        raw: window.__app?.model.getRaw(2, 3),
+        display: window.__app?.model.getDisplay(2, 3),
+        format: window.__app?.model.getFormat(2, 3),
+        selection: window.__app?.app.viewport.selectionRange(),
+        audit: window.__app?.audit(),
+      })),
+    )
+    .toEqual({
+      raw: "=C3*2",
+      display: "$10",
+      format: { bold: true, numberFormat: "currency" },
+      selection: { r1: 2, c1: 2, r2: 2, c2: 3 },
+      audit: [],
+    });
+
+  await page.keyboard.press("Control+z");
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        left: window.__app?.model.getRaw(2, 2),
+        right: window.__app?.model.getRaw(2, 3),
+      })),
+    )
+    .toEqual({ left: "=B3*1.1", right: "" });
+});
+
+test("does not reuse stale internal formats for matching external text", async ({
+  page,
+}) => {
+  await page.goto("/?debug");
+  await page.evaluate(() => {
+    const app = window.__app?.app;
+    const model = window.__app?.model;
+    if (!app || !model) throw new Error("Numera debug surface is unavailable");
+    model.setCell(0, 0, "same");
+    model.setFormat(0, 0, { bold: true });
+    app.controller.select({ row: 0, col: 0 });
+    const internalClipboard = new DataTransfer();
+    const copyEvent = new Event("copy", { cancelable: true });
+    Object.defineProperty(copyEvent, "clipboardData", {
+      value: internalClipboard,
+    });
+    window.dispatchEvent(copyEvent);
+
+    const externalClipboard = new DataTransfer();
+    externalClipboard.setData("text/plain", "same");
+    app.controller.select({ row: 3, col: 3 });
+    const pasteEvent = new Event("paste", { cancelable: true });
+    Object.defineProperty(pasteEvent, "clipboardData", {
+      value: externalClipboard,
+    });
+    window.dispatchEvent(pasteEvent);
+  });
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        raw: window.__app?.model.getRaw(3, 3),
+        format: window.__app?.model.getFormat(3, 3),
+      })),
+    )
+    .toEqual({ raw: "same", format: {} });
+});
+
 test("switches and creates workbook sheets through the canvas tab strip", async ({
   page,
 }) => {

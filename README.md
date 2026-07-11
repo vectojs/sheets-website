@@ -23,7 +23,8 @@ package; this repository owns only the VectoJS UI/UX adapter.
   keyboard navigation (arrows, Shift, Home/End, Page, Ctrl/Command corners),
   and double-click/F2/typing editing;
 - native IME, clipboard, selection, and undo support through VectoJS `Input`;
-- TSV copy/paste, range clearing, and transactional undo/redo;
+- external TSV copy/paste plus internal formula/format-aware range transfer,
+  range clearing, and transactional undo/redo;
 - Ctrl/Command+A selection of the sparse used range plus Ctrl/Command+X/C/V
   and Z/Y document shortcuts, without creating writes for blank cells;
 - ordered multi-sheet workbooks with a canvas-native tab strip, stable sheet
@@ -36,7 +37,7 @@ package; this repository owns only the VectoJS UI/UX adapter.
   primitives, with canvas JSON/CSV copy controls and CSV paste import, shared
   by future CLI and MCP adapters.
 - Canvas-native `Import` and `XLSX` toolbar intentions backed by the exact
-  published `@vectojs/numera-xlsx@0.1.0` adapter. Native file selection and
+  published `@vectojs/numera-xlsx@0.1.1` adapter. Native file selection and
   download elements are transient browser I/O only; the visible toolbar,
   status feedback, workbook replacement, and VMT refresh stay Canvas-native.
 - structural row and column insertion/deletion with sparse-format preservation,
@@ -45,8 +46,9 @@ package; this repository owns only the VectoJS UI/UX adapter.
   compacting lower-priority export controls.
 - sparse per-row and per-column logical sizes, Canvas header-edge resize
   gestures, and a selection fill handle. Gesture previews remain numeric VMT
-  state; releasing the pointer creates one undoable document transaction.
-
+  state; fill commits translate relative A1 references and copy exact formats
+  through Numera Core rather than repeating raw strings in the view layer.
+  Releasing the pointer creates one undoable document transaction.
 - responsive container measurement and `?debug` VMT inspection/audit.
 
 The XLSX codec is loaded only after an import/export action, keeping the normal
@@ -55,8 +57,9 @@ initial application chunk focused on the interactive spreadsheet.
 Numera intentionally excludes collaboration, cloud persistence, accounts,
 sharing, comments, permissions, and platform scripting. Microsoft Excel is the
 primary reference for local workbook and file behavior, without claiming
-exhaustive compatibility. `numera-cli`, `numera-skills`, and `numera-mcp` are
-future independent repositories over the same pure document APIs.
+exhaustive compatibility. `numera-cli` and `numera-skills` are independent,
+published companion repositories; `numera-mcp` is the next adapter over the
+same pure document APIs.
 
 ## Development
 

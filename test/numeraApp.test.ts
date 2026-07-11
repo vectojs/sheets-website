@@ -218,21 +218,51 @@ describe("SheetController", () => {
     expect(model.getAxisSize("row", 2)).toBe(40);
   });
 
-  it("fills a target rectangle by repeating selected raw cells as one transaction", () => {
+  it("fills translated formulas and exact formats as one transaction", () => {
     const { model, controller } = createController();
     model.setCell(0, 0, "first");
     model.setCell(0, 1, '=A1&"!"');
+    model.setFormat(0, 0, { bold: true });
+    model.setFormat(0, 1, { background: "#fef3c7" });
+    model.setCell(2, 3, "before");
+    model.setFormat(2, 3, { italic: true });
     controller.select({ row: 0, col: 0 });
     controller.extendSelection({ row: 0, col: 1 });
 
     controller.fillSelection({ r1: 1, c1: 0, r2: 2, c2: 3 });
     expect(model.getRaw(1, 0)).toBe("first");
-    expect(model.getRaw(1, 1)).toBe('=A1&"!"');
+    expect(model.getRaw(1, 1)).toBe('=A2&"!"');
     expect(model.getRaw(2, 2)).toBe("first");
-    expect(model.getRaw(2, 3)).toBe('=A1&"!"');
+    expect(model.getRaw(2, 3)).toBe('=C3&"!"');
+    expect(model.getFormat(2, 2)).toEqual({ bold: true });
+    expect(model.getFormat(2, 3)).toEqual({ background: "#fef3c7" });
 
     controller.undo();
     expect(model.getRaw(1, 0)).toBe("");
+    expect(model.getRaw(2, 3)).toBe("before");
+    expect(model.getFormat(2, 3)).toEqual({ italic: true });
+  });
+
+  it("pastes an internal range with formulas and formats as one transaction", () => {
+    const { model, controller } = createController();
+    model.setCell(0, 0, "5");
+    model.setCell(0, 1, "=A1*2");
+    model.setFormat(0, 1, { bold: true, numberFormat: "currency" });
+    controller.select({ row: 0, col: 0 });
+    controller.extendSelection({ row: 0, col: 1 });
+    const copied = controller.copySelectionPayload();
+
+    controller.select({ row: 2, col: 2 });
+    controller.pasteRange(copied.payload);
+
+    expect(model.getRaw(2, 2)).toBe("5");
+    expect(model.getRaw(2, 3)).toBe("=C3*2");
+    expect(model.getFormat(2, 3)).toEqual({
+      bold: true,
+      numberFormat: "currency",
+    });
+    controller.undo();
+    expect(model.getRaw(2, 2)).toBe("");
     expect(model.getRaw(2, 3)).toBe("");
   });
 });

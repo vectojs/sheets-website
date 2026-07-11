@@ -15,6 +15,9 @@ All notable changes to this project are documented in this file.
 - Exact-pinned `@vectojs/numera-xlsx@0.1.0` with Canvas import/export actions,
   transient native file I/O, typed corrupt-file feedback, and lazy OOXML codec
   loading so ordinary spreadsheet startup does not load ExcelJS.
+- Exact-pinned `@vectojs/numera-core@0.4.0`,
+  `@vectojs/numera-xlsx@0.1.1`, and `@vectojs/ui@1.1.3` for one Workbook type,
+  formula-aware range transfer, and the latest stable VectoJS UI fixes.
 
 ### Fixed
 
@@ -26,6 +29,9 @@ All notable changes to this project are documented in this file.
   preventing upload-only CI runs from leaving the production domain stale.
 
 ### Added
+
+- Formula-aware fill and internal copy/paste that preserve exact formats,
+  translate relative/mixed/absolute A1 references, and undo as one transaction.
 
 - Repository `Justfile` with shared development, verification, selectable local
   browser verification, full CI browser matrix, and Cloudflare Pages deployment

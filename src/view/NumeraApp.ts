@@ -2,15 +2,18 @@ import { Scene } from "@vectojs/core";
 import { Input } from "@vectojs/ui";
 import {
   type CellFormat,
+  captureRange,
   copyRange,
   fromCsv,
   pasteText,
   SheetHistory,
   SheetModel,
+  type SheetRangePayload,
   type SheetStructureOperation,
   type Rect,
   toCsv,
   toWorkbookJson,
+  transferRange,
   Workbook,
 } from "@vectojs/numera-core";
 import { SheetGridEntity } from "./SheetGridEntity";
@@ -130,8 +133,39 @@ export class SheetController {
     return copyRange(this.model, this.viewport.selectionRange());
   }
 
+  copySelectionPayload(): { text: string; payload: SheetRangePayload } {
+    const range = this.viewport.selectionRange();
+    return {
+      text: copyRange(this.model, range),
+      payload: captureRange(this.model, range),
+    };
+  }
+
   paste(text: string): void {
     this.history.apply(pasteText(text, this.viewport.selected, this.model));
+  }
+
+  pasteRange(payload: SheetRangePayload): void {
+    const target: Rect = {
+      r1: this.viewport.selected.row,
+      c1: this.viewport.selected.col,
+      r2: Math.min(
+        this.model.rows - 1,
+        this.viewport.selected.row + payload.rows - 1,
+      ),
+      c2: Math.min(
+        this.model.cols - 1,
+        this.viewport.selected.col + payload.cols - 1,
+      ),
+    };
+    this.history.applyCellStates(
+      transferRange(payload, target, this.model, {
+        row: target.r1,
+        col: target.c1,
+      }),
+    );
+    this.viewport.select({ row: target.r1, col: target.c1 });
+    this.viewport.extendSelection({ row: target.r2, col: target.c2 });
   }
 
   clearSelection(): void {
@@ -204,25 +238,12 @@ export class SheetController {
     this.syncViewportMetrics();
   }
 
-  /** Repeat source raw cells into a bounded target as one history entry. */
+  /** Transfer formula-aware values and exact formats as one history entry. */
   fillSelection(target: Rect): void {
     const source = this.viewport.selectionRange();
-    const sourceRows = source.r2 - source.r1 + 1;
-    const sourceColumns = source.c2 - source.c1 + 1;
-    const writes = [];
-    for (let row = target.r1; row <= target.r2; row++) {
-      for (let col = target.c1; col <= target.c2; col++) {
-        writes.push({
-          row,
-          col,
-          raw: this.model.getRaw(
-            source.r1 + modulo(row - source.r1, sourceRows),
-            source.c1 + modulo(col - source.c1, sourceColumns),
-          ),
-        });
-      }
-    }
-    this.history.apply(writes);
+    this.history.applyCellStates(
+      transferRange(captureRange(this.model, source), target, this.model),
+    );
     this.viewport.select({ row: target.r1, col: target.c1 });
     this.viewport.extendSelection({ row: target.r2, col: target.c2 });
   }
@@ -264,6 +285,9 @@ export class NumeraApp {
   private readonly fileBridge: XlsxFileBridge;
   private readonly onWorkbookChanged:
     ((workbook: Workbook) => void) | undefined;
+  private internalClipboard:
+    { marker: string; text: string; payload: SheetRangePayload } | undefined;
+  private clipboardSequence = 0;
 
   constructor(
     readonly scene: Scene,
@@ -354,6 +378,7 @@ export class NumeraApp {
     this.removeTabEditor(true);
     this.scene.remove(this.tabs);
     this.workbook = workbook;
+    this.internalClipboard = undefined;
     this.tabs = this.createTabs();
     this.scene.add(this.tabs);
     this.rebuildActiveSheet();
@@ -643,13 +668,29 @@ export class NumeraApp {
   private handleCopy(event: ClipboardEvent): void {
     if (isNativeTextTarget(document.activeElement)) return;
     event.preventDefault();
-    event.clipboardData?.setData("text/plain", this.controller.copySelection());
+    this.internalClipboard = {
+      marker: `numera-range-${++this.clipboardSequence}`,
+      ...this.controller.copySelectionPayload(),
+    };
+    event.clipboardData?.setData("text/plain", this.internalClipboard.text);
+    event.clipboardData?.setData(
+      NUMERA_RANGE_CLIPBOARD_TYPE,
+      this.internalClipboard.marker,
+    );
   }
 
   private handleCut(event: ClipboardEvent): void {
     if (isNativeTextTarget(document.activeElement)) return;
     event.preventDefault();
-    event.clipboardData?.setData("text/plain", this.controller.copySelection());
+    this.internalClipboard = {
+      marker: `numera-range-${++this.clipboardSequence}`,
+      ...this.controller.copySelectionPayload(),
+    };
+    event.clipboardData?.setData("text/plain", this.internalClipboard.text);
+    event.clipboardData?.setData(
+      NUMERA_RANGE_CLIPBOARD_TYPE,
+      this.internalClipboard.marker,
+    );
     this.controller.clearSelection();
     this.syncFormulaBar();
     this.scene.markDirty();
@@ -660,7 +701,16 @@ export class NumeraApp {
     const text = event.clipboardData?.getData("text/plain");
     if (text === undefined) return;
     event.preventDefault();
-    if (!text.includes("\t") && text.includes(","))
+    const rangeMarker = event.clipboardData?.getData(
+      NUMERA_RANGE_CLIPBOARD_TYPE,
+    );
+    if (
+      rangeMarker !== undefined &&
+      rangeMarker !== "" &&
+      this.internalClipboard?.marker === rangeMarker
+    )
+      this.controller.pasteRange(this.internalClipboard.payload);
+    else if (!text.includes("\t") && text.includes(","))
       this.controller.history.apply(
         fromCsv(text, this.viewport.selected, this.model),
       );
@@ -816,6 +866,4 @@ function isNativeTextTarget(target: EventTarget | null): boolean {
   );
 }
 
-function modulo(value: number, divisor: number): number {
-  return ((value % divisor) + divisor) % divisor;
-}
+const NUMERA_RANGE_CLIPBOARD_TYPE = "application/x-numera-range";
